@@ -1,0 +1,1 @@
+import{a as t}from"./useApiKey-AW1G4jAn.js";async function n(a,r){const e=new FormData;return e.append("purpose",r),e.append("file",a),(await t.post("/v1/files/upload",e)).data}async function i(a){return(await t.get("/v1/files/retrieve",{params:{file_id:a}})).data}export{i as r,n as u};

@@ -1,0 +1,1 @@
+import{a as r}from"./useApiKey-AW1G4jAn.js";import{s as n}from"./stream-U5njlV2A.js";async function o(e){return(await r.post("/v1/music_generation",e,{timeout:18e4})).data}async function m(e,t,a){return n("/v1/music_generation",e,t,a)}export{o as a,m as g};
