@@ -1,0 +1,25 @@
+{
+  "name": "minimax-audio-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MiniMaxAudioTool - MiniMax 音频能力前端工具集（纯前端，浏览器直连 MiniMax API）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.7.7",
+    "element-plus": "^2.8.4",
+    "pinia": "^2.2.4",
+    "vite-plugin-pwa": "^0.20.5",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.10"
+  }
+}
