@@ -26,32 +26,32 @@
     <!-- 语音列表 -->
     <el-card v-else shadow="never" class="list-card">
       <el-collapse v-model="activeNames" class="voice-collapse">
-        <!-- 系统音色 -->
-        <el-collapse-item name="system">
+        <!-- 设计音色 -->
+        <el-collapse-item name="voice_generation">
           <template #title>
             <div class="collapse-title">
-              <el-icon class="collapse-title__icon"><Microphone /></el-icon>
-              <span class="collapse-title__text">系统音色</span>
-              <el-tag size="small" type="info" effect="plain" round>{{ systemVoices.length }}</el-tag>
+              <el-icon class="collapse-title__icon"><MagicStick /></el-icon>
+              <span class="collapse-title__text">设计音色</span>
+              <el-tag size="small" type="info" effect="plain" round>{{ generationVoices.length }}</el-tag>
             </div>
           </template>
           <div class="table-wrap">
-            <el-table :data="systemVoices" v-loading="loading" stripe size="default">
+            <el-table :data="generationVoices" v-loading="loading" stripe size="default">
               <el-table-column prop="voice_id" label="Voice ID" min-width="200" show-overflow-tooltip />
-              <el-table-column prop="voice_name" label="音色名称" min-width="140" show-overflow-tooltip />
               <el-table-column label="描述" min-width="240">
                 <template #default="{ row }">{{ joinDesc(row.description) }}</template>
               </el-table-column>
               <el-table-column label="创建时间" min-width="170">
                 <template #default="{ row }">{{ formatTime(row.created_time) }}</template>
               </el-table-column>
-              <el-table-column label="操作" width="120" fixed="right">
+              <el-table-column label="操作" width="180" fixed="right">
                 <template #default="{ row }">
                   <el-button link type="primary" :icon="CopyDocument" @click="copyId(row.voice_id)">复制ID</el-button>
+                  <el-button link type="danger" :icon="Delete" @click="handleDelete('voice_generation', row.voice_id)">删除</el-button>
                 </template>
               </el-table-column>
               <template #empty>
-                <el-empty description="暂无系统音色" :image-size="72" />
+                <el-empty description="暂无设计音色" :image-size="72" />
               </template>
             </el-table>
           </div>
@@ -88,32 +88,29 @@
           </div>
         </el-collapse-item>
 
-        <!-- 设计音色 -->
-        <el-collapse-item name="voice_generation">
+        <!-- 系统音色 -->
+        <el-collapse-item name="system">
           <template #title>
             <div class="collapse-title">
-              <el-icon class="collapse-title__icon"><MagicStick /></el-icon>
-              <span class="collapse-title__text">设计音色</span>
-              <el-tag size="small" type="info" effect="plain" round>{{ generationVoices.length }}</el-tag>
+              <el-icon class="collapse-title__icon"><Microphone /></el-icon>
+              <span class="collapse-title__text">系统音色</span>
+              <el-tag size="small" type="info" effect="plain" round>{{ systemVoices.length }}</el-tag>
             </div>
           </template>
           <div class="table-wrap">
-            <el-table :data="generationVoices" v-loading="loading" stripe size="default">
+            <el-table :data="systemVoices" v-loading="loading" stripe size="default">
               <el-table-column prop="voice_id" label="Voice ID" min-width="200" show-overflow-tooltip />
+              <el-table-column prop="voice_name" label="音色名称" min-width="140" show-overflow-tooltip />
               <el-table-column label="描述" min-width="240">
                 <template #default="{ row }">{{ joinDesc(row.description) }}</template>
               </el-table-column>
-              <el-table-column label="创建时间" min-width="170">
-                <template #default="{ row }">{{ formatTime(row.created_time) }}</template>
-              </el-table-column>
-              <el-table-column label="操作" width="180" fixed="right">
+              <el-table-column label="操作" width="120" fixed="right">
                 <template #default="{ row }">
                   <el-button link type="primary" :icon="CopyDocument" @click="copyId(row.voice_id)">复制ID</el-button>
-                  <el-button link type="danger" :icon="Delete" @click="handleDelete('voice_generation', row.voice_id)">删除</el-button>
                 </template>
               </el-table-column>
               <template #empty>
-                <el-empty description="暂无设计音色" :image-size="72" />
+                <el-empty description="暂无系统音色" :image-size="72" />
               </template>
             </el-table>
           </div>
@@ -142,7 +139,7 @@ const systemVoices = ref([])
 const cloningVoices = ref([])
 const generationVoices = ref([])
 // 默认展开全部折叠面板
-const activeNames = ref(['system', 'voice_cloning', 'voice_generation'])
+const activeNames = ref(['voice_generation', 'voice_cloning', 'system'])
 
 // 将 description 数组拼接为可读字符串
 function joinDesc(desc) {
