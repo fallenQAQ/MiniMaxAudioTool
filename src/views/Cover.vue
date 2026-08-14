@@ -86,7 +86,7 @@
 
           <el-form-item label="音频时长">
             <el-tag type="info">
-              {{ formatSeconds(preprocessResult.audio_duration) }}
+              {{ formatDuration(preprocessResult.audio_duration * 1000) }}
               <span class="tag-raw">（{{ preprocessResult.audio_duration }} 秒）</span>
             </el-tag>
           </el-form-item>
@@ -115,9 +115,13 @@
 
       <el-form label-width="130px" label-position="right">
         <el-form-item label="模型">
-          <el-select v-model="genForm.model" :disabled="!preprocessDone" style="width: 280px">
-            <el-option label="music-cover（标准版）" value="music-cover" />
-            <el-option label="music-cover-free（免费版）" value="music-cover-free" />
+          <el-select v-model="genForm.model" :disabled="!preprocessDone" class="model-select">
+            <el-option
+              v-for="m in modelOptions"
+              :key="m.value"
+              :label="m.label"
+              :value="m.value"
+            />
           </el-select>
         </el-form-item>
 
@@ -168,9 +172,9 @@
           </el-form-item>
 
           <el-form-item v-if="extraInfo" label="附加信息">
-            <el-descriptions :column="2" border size="small">
+            <el-descriptions :column="descColumn" border size="small">
               <el-descriptions-item label="音频时长">
-                {{ extraInfo.music_duration != null ? formatSeconds(extraInfo.music_duration) : '-' }}
+                {{ extraInfo.music_duration != null ? formatDuration(extraInfo.music_duration) : '-' }}
               </el-descriptions-item>
               <el-descriptions-item label="使用模型">
                 {{ genForm.model }}
@@ -190,7 +194,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
 import {
   Microphone,
   Headset,
@@ -201,14 +205,24 @@ import {
 import AudioPlayer from '@/components/AudioPlayer.vue'
 import { preprocess } from '@/api/modules/cover'
 import { generate } from '@/api/modules/music'
-import { fileToBase64 } from '@/utils/audio'
+import { fileToBase64, formatDuration } from '@/utils/audio'
+import { copyText } from '@/utils/clipboard'
 import { useApiKey } from '@/composables/useApiKey'
+import { useViewport } from '@/composables/useViewport'
+import { COVER_MODELS } from '@/constants'
 
 // API Key 校验
 const { hasKey, goSettings } = useApiKey()
 
+// 附加信息描述列表列数：桌面 2 列，移动 1 列
+const { width: winWidth } = useViewport()
+const descColumn = computed(() => (winWidth.value < 768 ? 1 : 2))
+
 // 当前激活步骤（0=步骤一，1=步骤二）
 const activeStep = ref(0)
+
+// 翻唱模型选项（共享常量）
+const modelOptions = COVER_MODELS
 
 // ============================ 步骤一：翻唱前处理 ============================
 const uploadRef = ref(null)
@@ -317,19 +331,7 @@ async function handlePreprocess() {
 async function copyFeatureId() {
   const id = preprocessResult.value?.cover_feature_id
   if (!id) return
-  try {
-    await navigator.clipboard.writeText(id)
-    ElMessage.success('已复制 cover_feature_id')
-  } catch (_) {
-    // 降级方案：使用临时 textarea
-    const ta = document.createElement('textarea')
-    ta.value = id
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
-    ElMessage.success('已复制 cover_feature_id')
-  }
+  await copyText(id, '已复制 cover_feature_id')
 }
 
 /**
@@ -416,19 +418,6 @@ async function handleGenerate() {
     generateLoading.value = false
   }
 }
-
-/**
- * 秒数 → mm:ss 格式化
- * @param {number} sec
- */
-function formatSeconds(sec) {
-  const n = Number(sec)
-  if (!Number.isFinite(n)) return '-'
-  const total = Math.max(0, Math.floor(n))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
 </script>
 
 <style scoped>
@@ -453,6 +442,11 @@ function formatSeconds(sec) {
 }
 .upload-wrapper {
   width: 100%;
+}
+/* 模型下拉：桌面限宽 280px，窄屏自动收缩占满 */
+.model-select {
+  width: 100%;
+  max-width: 280px;
 }
 .upload-tip {
   font-size: 12px;
@@ -490,4 +484,5 @@ function formatSeconds(sec) {
   max-height: 320px;
   overflow: auto;
 }
+/* 移动端表单 label 顶部化与步骤条描述隐藏由 App.vue 全局规则处理 */
 </style>

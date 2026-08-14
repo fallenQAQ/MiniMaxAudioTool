@@ -62,26 +62,17 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Microphone, Document, CopyDocument, MagicStick, Collection,
-  Headset, EditPen, Setting, Menu as MenuIcon
+  Headset, EditPen, Setting
 } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
+import { routes } from '@/router'
 
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
 
-// 路由菜单项（不含重定向）
-const menuItems = [
-  { path: '/tts', meta: { title: '语音合成', icon: 'Microphone' } },
-  { path: '/long-tts', meta: { title: '长文本语音', icon: 'Document' } },
-  { path: '/voice-clone', meta: { title: '语音克隆', icon: 'CopyDocument' } },
-  { path: '/voice-design', meta: { title: '语音设计', icon: 'MagicStick' } },
-  { path: '/voice-mgmt', meta: { title: '语音管理', icon: 'Collection' } },
-  { path: '/music', meta: { title: '音乐生成', icon: 'Headset' } },
-  { path: '/cover', meta: { title: '歌曲翻唱', icon: 'Microphone' } },
-  { path: '/lyrics', meta: { title: '歌词生成', icon: 'EditPen' } },
-  { path: '/settings', meta: { title: '设置', icon: 'Setting' } }
-]
+// 菜单项直接取自路由表（不含重定向），避免两处维护
+const menuItems = routes.filter((r) => r.path !== '/')
 
 // 移动端底部导航：8 个功能页 + 设置（共 9 个，移动端滚动）
 const bottomItems = menuItems
@@ -89,7 +80,7 @@ const bottomItems = menuItems
 // 图标名 → 组件映射
 const iconMap = {
   Microphone, Document, CopyDocument, MagicStick, Collection,
-  Headset, EditPen, Setting, MenuIcon
+  Headset, EditPen, Setting
 }
 
 const activeMenu = computed(() => route.path)
@@ -182,7 +173,8 @@ const activeMenu = computed(() => route.path)
   }
   .app-main {
     padding: 12px;
-    padding-bottom: 64px;
+    /* 预留底部导航高度 + iOS 全面屏底部安全区 */
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
   .app-bottomnav {
     display: flex;
@@ -191,7 +183,9 @@ const activeMenu = computed(() => route.path)
     bottom: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    /* 高度含 iOS Home Indicator 安全区，避免底部导航被遮挡 */
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
     background: #fff;
     border-top: 1px solid #e4e7ed;
     z-index: 100;
@@ -226,5 +220,45 @@ const activeMenu = computed(() => route.path)
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+</style>
+
+<style>
+/* ===== 移动端全局适配（≤768px） ===== */
+@media (max-width: 768px) {
+  /* 输入控件字号 ≥16px：iOS Safari 聚焦小于 16px 的输入框时会强制放大页面，
+     在 viewport 允许缩放后此规则保证表单交互体验稳定 */
+  .el-input__inner,
+  .el-textarea__inner {
+    font-size: 16px;
+  }
+
+  /* 表单 label 顶部化：覆盖 label-width 生成的 inline 宽度，
+     释放被固定左列（110~130px）占用的横向空间（涉及 LongTts/Music/Settings 等） */
+  .el-form .el-form-item {
+    display: block;
+  }
+  .el-form .el-form-item__label {
+    float: none;
+    display: inline-flex;
+    justify-content: flex-start;
+    width: 100% !important;
+    text-align: left;
+    padding-right: 0;
+    line-height: 1.6;
+  }
+  .el-form .el-form-item__content {
+    margin-left: 0 !important;
+  }
+
+  /* 步骤条隐藏描述文字，避免窄屏换行拥挤（LongTts/Cover/VoiceClone） */
+  .el-step__description {
+    display: none;
+  }
+
+  /* 单选组允许换行，容纳长文案选项（Settings 基础地址等） */
+  .el-radio-group {
+    flex-wrap: wrap;
+  }
 }
 </style>

@@ -231,7 +231,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
 import {
   CopyDocument, UploadFilled, Document, Delete, RefreshLeft, Promotion
 } from '@element-plus/icons-vue'
@@ -239,6 +239,7 @@ import { upload } from '@/api/modules/file'
 import { clone } from '@/api/modules/voiceClone'
 import AudioPlayer from '@/components/AudioPlayer.vue'
 import { useApiKey } from '@/composables/useApiKey'
+import { SPEECH_MODEL_VALUES, LANGUAGES } from '@/constants'
 
 // API Key 校验
 const { hasKey, goSettings } = useApiKey()
@@ -272,27 +273,10 @@ const demoAudio = ref('')
 const extraInfo = ref(null)
 
 // 试听模型选项
-const modelOptions = [
-  'speech-2.8-hd', 'speech-2.8-turbo',
-  'speech-2.6-hd', 'speech-2.6-turbo',
-  'speech-02-hd', 'speech-02-turbo'
-]
+const modelOptions = SPEECH_MODEL_VALUES
 
-// 语种增强选项
-const languageOptions = [
-  { label: '自动', value: 'auto' },
-  { label: '中文', value: 'Chinese' },
-  { label: '英文', value: 'English' },
-  { label: '日文', value: 'Japanese' },
-  { label: '韩文', value: 'Korean' },
-  { label: '俄文', value: 'Russian' },
-  { label: '西班牙文', value: 'Spanish' },
-  { label: '法文', value: 'French' },
-  { label: '德文', value: 'German' },
-  { label: '葡萄牙文', value: 'Portuguese' },
-  { label: '意大利文', value: 'Italian' },
-  { label: '阿拉伯文', value: 'Arabic' }
-]
+// 语种增强选项（共享常量全集）
+const languageOptions = LANGUAGES
 
 /**
  * voice_id 校验规则：
@@ -611,14 +595,8 @@ function formatValue(val) {
   font-weight: 600;
 }
 
-/* 移动端适配 */
+/* 移动端适配：label 顶部化与步骤条描述隐藏由 App.vue 全局规则处理 */
 @media (max-width: 768px) {
-  .vc-form :deep(.el-form-item__label) {
-    width: 90px !important;
-  }
-  .vc-form :deep(.el-form-item__content) {
-    margin-left: 90px !important;
-  }
   .vc-keyalert {
     flex-direction: column;
     align-items: flex-start;
