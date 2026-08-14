@@ -107,11 +107,12 @@
 
 <script setup>
 import { ref, reactive, onBeforeUnmount } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
 import { MagicStick, Headset, CopyDocument } from '@element-plus/icons-vue'
 import { design } from '@/api/modules/voiceDesign'
 import { useApiKey } from '@/composables/useApiKey'
 import { hexToObjectUrl } from '@/utils/audio'
+import { copyText } from '@/utils/clipboard'
 import AudioPlayer from '@/components/AudioPlayer.vue'
 
 // API Key 校验
@@ -146,12 +147,7 @@ function revokeAudioUrl() {
 // 复制 voice_id 到剪贴板
 async function handleCopy() {
   if (!result.value || !result.value.voice_id) return
-  try {
-    await navigator.clipboard.writeText(result.value.voice_id)
-    ElMessage.success('音色 ID 已复制到剪贴板')
-  } catch (e) {
-    ElMessage.error('复制失败，请手动复制')
-  }
+  await copyText(result.value.voice_id, '音色 ID 已复制到剪贴板')
 }
 
 // 提交语音设计

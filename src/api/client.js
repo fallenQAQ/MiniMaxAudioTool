@@ -92,7 +92,7 @@ apiClient.interceptors.response.use(
       const statusCode = baseResp.status_code
       if (statusCode !== undefined && statusCode !== 0) {
         const message = baseResp.status_msg || getErrorMessage(statusCode)
-        throw new MiniMaxApiError(message, statusCode, data)
+        return Promise.reject(new MiniMaxApiError(message, statusCode, data))
       }
     }
     return response

@@ -46,7 +46,8 @@ export async function streamRequest(path, payload, onChunk, signal) {
   const reader = resp.body.getReader()
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
-  let fullAudio = ''
+  // 用数组收集分片、结尾一次性 join，避免大音频 hex 反复字符串拼接的 O(n²) 开销
+  const audioParts = []
 
   const handleLine = (line) => {
     const trimmed = line.trim()
@@ -65,7 +66,7 @@ export async function streamRequest(path, payload, onChunk, signal) {
         throw new MiniMaxApiError(chunk.base_resp.status_msg || getErrorMessage(statusCode), statusCode, chunk)
       }
       if (chunk.data && chunk.data.audio) {
-        fullAudio += chunk.data.audio
+        audioParts.push(chunk.data.audio)
       }
       if (typeof onChunk === 'function') onChunk(chunk)
     } catch (e) {
@@ -91,5 +92,5 @@ export async function streamRequest(path, payload, onChunk, signal) {
     handleLine(buffer)
   }
 
-  return fullAudio
+  return audioParts.join('')
 }

@@ -159,13 +159,14 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
 import {
   EditPen, MagicStick, Document, CopyDocument, Headset, Star
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { generate } from '@/api/modules/lyrics'
 import { useApiKey } from '@/composables/useApiKey'
+import { copyText } from '@/utils/clipboard'
 
 const router = useRouter()
 const { hasKey, goSettings } = useApiKey()
@@ -246,12 +247,7 @@ async function handleCopy() {
     ElMessage.warning('暂无歌词可复制')
     return
   }
-  try {
-    await navigator.clipboard.writeText(result.value.lyrics)
-    ElMessage.success('歌词已复制到剪贴板')
-  } catch (e) {
-    ElMessage.error('复制失败，请手动选择文本复制')
-  }
+  await copyText(result.value.lyrics, '歌词已复制到剪贴板')
 }
 
 /**

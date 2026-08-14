@@ -65,9 +65,11 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index'
 import { Setting, Check, Delete, View, Hide, InfoFilled } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
+import { SPEECH_MODEL_DOCS, MUSIC_MODEL_DOCS } from '@/constants'
 
 const settings = useSettingsStore()
 const formRef = ref(null)
@@ -82,23 +84,9 @@ const rules = {
   apiKey: [{ required: true, message: '请输入 API Key', trigger: 'blur' }]
 }
 
-// 语音模型说明
-const speechModels = [
-  { name: 'speech-2.8-hd', desc: '最新 HD 模型，情绪渲染融合语气词，重塑自然听感' },
-  { name: 'speech-2.8-turbo', desc: '最新 Turbo 模型，极致生成速度，更自然逼真的音频效果' },
-  { name: 'speech-2.6-hd', desc: 'HD 模型，韵律表现出色，极致音质与韵律表现，生成更快更自然' },
-  { name: 'speech-2.6-turbo', desc: 'Turbo 模型，音质优异，超低时延，响应更灵敏' },
-  { name: 'speech-02-hd', desc: '拥有出色的韵律、稳定性和复刻相似度，音质表现突出' },
-  { name: 'speech-02-turbo', desc: '拥有出色的韵律和稳定性，小语种能力加强，性能表现出色' }
-]
-
-// 音乐模型说明
-const musicModels = [
-  { name: 'music-2.6', desc: '音乐生成主模型，支持歌词、风格提示，可生成带人声或纯音乐' },
-  { name: 'music-2.6-free', desc: '音乐生成免费版，能力与 music-2.6 接近，适合体验试用' },
-  { name: 'music-cover', desc: '歌曲翻唱模型，配合 music_cover_preprocess 生成的 cover_feature_id 使用' },
-  { name: 'music-cover-free', desc: '歌曲翻唱免费版，能力与 music-cover 接近' }
-]
+// 模型说明（共享常量）
+const speechModels = SPEECH_MODEL_DOCS
+const musicModels = MUSIC_MODEL_DOCS
 
 onMounted(() => {
   // 从 store 加载到表单

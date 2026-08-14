@@ -2,14 +2,34 @@ import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
-// Vite 配置：Vue 插件 + PWA + 开发代理（兜底 CORS）
+// Vite 配置：Vue 插件 + Element Plus 按需导入 + PWA + 开发代理（兜底 CORS）
 export default defineConfig({
   // 便于静态托管，使用相对路径
   base: './',
-  // element-plus 体积较大，放宽 chunk 体积警告阈值以消除构建告警
   build: {
-    chunkSizeWarningLimit: 1500
+    // 第三方库分包（函数形式，只归组实际被引用的模块，不影响 tree-shaking）
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (
+            id.includes('element-plus') ||
+            id.includes('@element-plus') ||
+            id.includes('@vueuse')
+          ) {
+            return 'element-plus'
+          }
+          if (/[\\/]node_modules[\\/](vue|vue-router|pinia)[\\/]/.test(id) || id.includes('@vue/')) {
+            return 'vue'
+          }
+          if (id.includes('axios')) return 'axios'
+          return undefined
+        }
+      }
+    }
   },
   resolve: {
     alias: {
@@ -18,6 +38,10 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    // Element Plus 组件按需自动导入（模板中使用的组件自动注入 JS 与样式）
+    Components({
+      resolvers: [ElementPlusResolver()]
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'pwa-192.png', 'pwa-512.png'],
@@ -28,7 +52,6 @@ export default defineConfig({
         theme_color: '#4f46e5',
         background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'portrait',
         start_url: './',
         scope: './',
         icons: [
