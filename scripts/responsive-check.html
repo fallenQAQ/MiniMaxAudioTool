@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><title>responsive-check</title></head>
+<body>
+<pre id="out">pending</pre>
+<iframe id="f" style="width:375px;height:900px;border:0"></iframe>
+<script>
+/**
+ * 响应式设计自动化测试用例
+ * 原理：同源 iframe 加载应用各路由，逐视口宽度（375/768/769/1280）采样计算样式并断言。
+ * 覆盖：移动端 label 顶部化、步骤条描述隐藏、输入字号 16px、底部导航/侧栏切换、
+ *       桌面端布局不回归、断点边界（768/769）、viewport meta、横向溢出。
+ */
+localStorage.setItem('minimax_audio_tool_settings', JSON.stringify({ apiKey: 'test-key-for-layout-check', baseUrl: 'https://api.minimaxi.com' }))
+
+const VW = [375, 768, 769, 1280]
+const ROUTES = [
+  { path: '/settings', fixedLabelDesktop: true },
+  { path: '/music', fixedLabelDesktop: true },
+  { path: '/long-tts', fixedLabelDesktop: true },
+  { path: '/voice-clone', fixedLabelDesktop: true, steps: true },
+  { path: '/cover', fixedLabelDesktop: true, steps: true },
+  { path: '/tts', fixedLabelDesktop: false }
+]
+const cases = []
+const f = document.getElementById('f')
+const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+const px = (v) => parseFloat(v) || 0
+
+function assert(id, desc, pass, actual) {
+  cases.push({ id, desc, pass: !!pass, actual: String(actual) })
+}
+
+function sample() {
+  const doc = f.contentDocument
+  const win = f.contentWindow
+  const item = doc.querySelector('.el-form-item')
+  const label = doc.querySelector('.el-form-item__label')
+  // el-input__inner 或 el-textarea__inner（部分页面首屏无 input 类控件则跳过字号断言）
+  const input = doc.querySelector('.el-input__inner, .el-textarea__inner')
+  const desc = doc.querySelector('.el-step__description')
+  const sidebar = doc.querySelector('.app-sidebar')
+  const bottomnav = doc.querySelector('.app-bottomnav')
+  const cs = (el) => (el ? win.getComputedStyle(el) : null)
+  const labelCs = cs(label)
+  return {
+    vw: win.innerWidth,
+    formItemDisplay: item ? cs(item).display : 'no-form',
+    labelWidth: labelCs ? px(labelCs.width) : -1,
+    labelJustify: labelCs ? labelCs.justifyContent : 'no-label',
+    stepDescDisplay: desc ? cs(desc).display : 'no-steps',
+    inputFontSize: input ? cs(input).fontSize : 'skip',
+    sidebarDisplay: sidebar ? cs(sidebar).display : 'no-sidebar',
+    bottomnavDisplay: bottomnav ? cs(bottomnav).display : 'no-bottomnav',
+    overflow: doc.documentElement.scrollWidth - doc.documentElement.clientWidth,
+    viewportMeta: (doc.querySelector('meta[name="viewport"]') || {}).content || 'missing'
+  }
+}
+
+function runAssertions(route, s) {
+  const p = route.path
+  const isMobile = s.vw <= 768
+
+  if (isMobile) {
+    assert(`M01${p}`, `${p} @${s.vw} 表单项 block 布局`, s.formItemDisplay === 'block', s.formItemDisplay)
+    assert(`M02${p}`, `${p} @${s.vw} label 顶部化占满整行`, s.labelWidth > 200, s.labelWidth + 'px')
+    assert(`M03${p}`, `${p} @${s.vw} label 左对齐`, s.labelJustify === 'flex-start', s.labelJustify)
+    assert(`M05${p}`, `${p} @${s.vw} 输入字号 16px 防 iOS 放大`, s.inputFontSize === '16px' || s.inputFontSize === 'skip', s.inputFontSize)
+    assert(`M06${p}`, `${p} @${s.vw} 无横向溢出`, s.overflow <= 1, s.overflow + 'px')
+    assert(`M07${p}`, `${p} @${s.vw} 底部导航显示`, s.bottomnavDisplay === 'flex', s.bottomnavDisplay)
+    assert(`M08${p}`, `${p} @${s.vw} 侧边栏隐藏`, s.sidebarDisplay === 'none', s.sidebarDisplay)
+    if (route.steps) {
+      assert(`M04${p}`, `${p} @${s.vw} 步骤条描述隐藏`, s.stepDescDisplay === 'none', s.stepDescDisplay)
+    }
+  } else {
+    if (route.fixedLabelDesktop) {
+      assert(`D01${p}`, `${p} @${s.vw} 桌面 label 恢复固定左列`, s.labelWidth > 0 && s.labelWidth <= 200, s.labelWidth + 'px')
+    }
+    assert(`D02${p}`, `${p} @${s.vw} 侧边栏显示`, s.sidebarDisplay !== 'none' && s.sidebarDisplay !== 'no-sidebar', s.sidebarDisplay)
+    assert(`D03${p}`, `${p} @${s.vw} 底部导航隐藏`, s.bottomnavDisplay === 'none', s.bottomnavDisplay)
+    if (route.steps) {
+      assert(`D04${p}`, `${p} @${s.vw} 步骤条描述正常显示`, s.stepDescDisplay !== 'none', s.stepDescDisplay)
+    }
+    assert(`D05${p}`, `${p} @${s.vw} 输入字号恢复默认`, s.inputFontSize !== '16px', s.inputFontSize)
+    assert(`D06${p}`, `${p} @${s.vw} 无横向溢出`, s.overflow <= 1, s.overflow + 'px')
+  }
+}
+
+function loadFrame(url) {
+  return new Promise((resolve) => {
+    let loaded = false
+    f.onload = () => { loaded = true }
+    f.src = url
+    const t = setInterval(() => { if (loaded) { clearInterval(t); resolve() } }, 100)
+    setTimeout(() => { clearInterval(t); resolve() }, 8000)
+  })
+}
+
+async function run() {
+  let metaChecked = false
+  for (const route of ROUTES) {
+    await loadFrame('about:blank')
+    await loadFrame('http://localhost:4173/#' + route.path)
+    await wait(2200)
+    for (const vw of VW) {
+      f.style.width = vw + 'px'
+      await wait(350)
+      const s = sample()
+      if (s.labelWidth < 0) { assert('LOAD' + route.path, `${route.path} 页面渲染失败`, false, s.formItemDisplay); continue }
+      runAssertions(route, s)
+      if (!metaChecked) {
+        const m = s.viewportMeta
+        assert('V01', 'viewport 含 viewport-fit=cover', m.includes('viewport-fit=cover'), m)
+        assert('V02', 'viewport 未禁用缩放（无 user-scalable=no）', !m.includes('user-scalable=no'), m)
+        metaChecked = true
+      }
+    }
+  }
+  localStorage.removeItem('minimax_audio_tool_settings')
+  const failed = cases.filter((c) => !c.pass)
+  const compact = {
+    total: cases.length,
+    failed: failed.length,
+    cases: cases.map((c) => ({ id: c.id, d: c.desc, p: c.pass ? 1 : 0, a: c.actual }))
+  }
+  // URL 编码输出：保证经 --dump-dom 序列化 DOM 时不被 HTML 转义破坏
+  const text = 'RESULT:' + encodeURIComponent(JSON.stringify(compact))
+  document.getElementById('out').textContent = text
+  console.log(text)
+}
+run()
+</script>
+</body>
+</html>
