@@ -1,7 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 // 路由表：10 个路由，/ 重定向到 /tts
-const routes = [
+export const routes = [
   { path: '/', redirect: '/tts' },
   {
     path: '/tts',
@@ -63,6 +63,13 @@ const router = createRouter({
   // 使用 hash 模式，便于静态托管无需服务端配置
   history: createWebHashHistory(),
   routes
+})
+
+// 路由切换后同步浏览器标签标题
+router.afterEach((to) => {
+  document.title = to.meta?.title
+    ? `${to.meta.title} · MiniMaxAudioTool`
+    : 'MiniMaxAudioTool'
 })
 
 export default router

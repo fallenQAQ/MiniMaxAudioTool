@@ -185,7 +185,7 @@
           class="music-alert"
         >
           <template #title>
-            流式生成中… 已接收 {{ receivedKb }} KB
+            流式生成中… 已接收 {{ formatBytes(receivedBytes) }}
             <span v-if="streamStatus !== null">（状态：{{ streamStatus === 2 ? '完成' : streamStatus === 1 ? '生成中' : streamStatus }}）</span>
           </template>
         </el-alert>
@@ -211,7 +211,7 @@
       <el-descriptions
         v-if="audioHex && extraInfoItems.length"
         title="附加信息"
-        :column="2"
+        :column="descColumn"
         border
         size="small"
         class="music-result__info"
@@ -237,7 +237,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
 import {
   Headset,
   Download,
@@ -245,12 +245,18 @@ import {
   RefreshLeft
 } from '@element-plus/icons-vue'
 import { useApiKey } from '@/composables/useApiKey'
+import { useViewport } from '@/composables/useViewport'
 import { generate, generateStream } from '@/api/modules/music'
-import { hexToBlob, downloadBlob, formatDuration } from '@/utils/audio'
+import { hexToBlob, downloadBlob, formatDuration, formatBytes } from '@/utils/audio'
 import AudioPlayer from '@/components/AudioPlayer.vue'
+import { MUSIC_MODELS, MUSIC_FORMATS, MUSIC_SAMPLE_RATES, BITRATES } from '@/constants'
 
 // API Key 校验
 const { hasKey, goSettings } = useApiKey()
+
+// 附加信息描述列表列数：桌面 2 列，移动 1 列
+const { width: winWidth } = useViewport()
+const descColumn = computed(() => (winWidth.value < 768 ? 1 : 2))
 
 // 表单状态
 const form = reactive({
@@ -265,24 +271,11 @@ const form = reactive({
   stream: false
 })
 
-// 下拉选项
-const modelOptions = [
-  { label: 'music-2.6（标准版）', value: 'music-2.6' },
-  { label: 'music-2.6-free（免费版）', value: 'music-2.6-free' }
-]
-const formatOptions = [
-  { label: 'MP3', value: 'mp3' },
-  { label: 'WAV', value: 'wav' },
-  { label: 'PCM', value: 'pcm' }
-]
-const sampleRateOptions = [16000, 24000, 32000, 44100].map((v) => ({
-  label: `${v} Hz`,
-  value: v
-}))
-const bitrateOptions = [32000, 64000, 128000, 256000].map((v) => ({
-  label: `${v / 1000} kbps`,
-  value: v
-}))
+// 下拉选项（共享常量）
+const modelOptions = MUSIC_MODELS
+const formatOptions = MUSIC_FORMATS.map((v) => ({ label: v.toUpperCase(), value: v }))
+const sampleRateOptions = MUSIC_SAMPLE_RATES.map((v) => ({ label: `${v} Hz`, value: v }))
+const bitrateOptions = BITRATES.map((v) => ({ label: `${v / 1000} kbps`, value: v }))
 
 // 运行时状态
 const loading = ref(false)
@@ -298,12 +291,8 @@ const streamStatus = ref(null)
 // 流式中断控制器
 let abortController = null
 
-// 已接收字节数（KB），用于流式进度展示
-const receivedKb = computed(() => {
-  // hex 字符串每 2 个字符表示 1 字节
-  const bytes = Math.floor((streamedHex.value || '').length / 2)
-  return (bytes / 1024).toFixed(2)
-})
+// 已接收字节数（hex 字符串每 2 个字符表示 1 字节），用于流式进度展示
+const receivedBytes = computed(() => Math.floor((streamedHex.value || '').length / 2))
 
 // 下载文件名
 const downloadFilename = computed(() => {

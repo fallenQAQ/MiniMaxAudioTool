@@ -27,7 +27,7 @@
     <el-card v-else shadow="never" class="list-card">
       <el-collapse v-model="activeNames" class="voice-collapse">
         <!-- 设计音色 -->
-        <el-collapse-item name="voice_generation">
+        <el-collapse-item v-if="visiblePanels.voice_generation" name="voice_generation">
           <template #title>
             <div class="collapse-title">
               <el-icon class="collapse-title__icon"><MagicStick /></el-icon>
@@ -58,7 +58,7 @@
         </el-collapse-item>
 
         <!-- 克隆音色 -->
-        <el-collapse-item name="voice_cloning">
+        <el-collapse-item v-if="visiblePanels.voice_cloning" name="voice_cloning">
           <template #title>
             <div class="collapse-title">
               <el-icon class="collapse-title__icon"><CopyDocument /></el-icon>
@@ -89,7 +89,7 @@
         </el-collapse-item>
 
         <!-- 系统音色 -->
-        <el-collapse-item name="system">
+        <el-collapse-item v-if="visiblePanels.system" name="system">
           <template #title>
             <div class="collapse-title">
               <el-icon class="collapse-title__icon"><Microphone /></el-icon>
@@ -121,11 +121,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus/es/components/message/index'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index'
 import { Search, Microphone, CopyDocument, MagicStick, Delete } from '@element-plus/icons-vue'
 import { getVoices, deleteVoice } from '@/api'
 import { useApiKey } from '@/composables/useApiKey'
+import { copyText } from '@/utils/clipboard'
 
 // API Key 校验：未配置时引导跳转设置页
 const { hasKey, goSettings } = useApiKey()
@@ -140,6 +142,16 @@ const cloningVoices = ref([])
 const generationVoices = ref([])
 // 默认展开全部折叠面板
 const activeNames = ref(['voice_generation', 'voice_cloning', 'system'])
+
+// 按筛选类型控制面板可见性：查询"系统音色"等单一类型时隐藏无关面板
+const visiblePanels = computed(() => {
+  const t = voiceType.value
+  return {
+    voice_generation: t === 'all' || t === 'voice_generation',
+    voice_cloning: t === 'all' || t === 'voice_cloning',
+    system: t === 'all' || t === 'system'
+  }
+})
 
 // 将 description 数组拼接为可读字符串
 function joinDesc(desc) {
@@ -183,25 +195,9 @@ async function handleQuery() {
   }
 }
 
-// 复制 voice_id 到剪贴板（含非安全上下文降级方案）
+// 复制 voice_id 到剪贴板（工具函数内含非安全上下文降级方案）
 async function copyId(voiceId) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(voiceId)
-    } else {
-      const textarea = document.createElement('textarea')
-      textarea.value = voiceId
-      textarea.style.position = 'fixed'
-      textarea.style.opacity = '0'
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-    }
-    ElMessage.success('已复制 Voice ID')
-  } catch (err) {
-    ElMessage.error('复制失败，请手动复制')
-  }
+  await copyText(voiceId, '已复制 Voice ID')
 }
 
 // 删除音色（仅克隆音色 / 设计音色）

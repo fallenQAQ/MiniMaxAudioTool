@@ -20,7 +20,8 @@ import { streamRequest } from '@/api/stream'
  * @returns {Promise<object>} response.data
  */
 export async function synthesize(payload) {
-  const resp = await apiClient.post('/v1/t2a_v2', payload)
+  // 非流式合成最长 10000 字符，耗时可能超过全局 60s 超时，单独放宽至 180s
+  const resp = await apiClient.post('/v1/t2a_v2', payload, { timeout: 180000 })
   return resp.data
 }
 

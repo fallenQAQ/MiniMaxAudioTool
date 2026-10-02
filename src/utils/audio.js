@@ -108,3 +108,15 @@ export function mimeFromFormat(format) {
   if (f === 'pcm') return 'audio/pcm'
   return 'audio/mp3'
 }
+
+/**
+ * 字节数格式化（B / KB / MB）
+ * @param {number} n
+ * @returns {string}
+ */
+export function formatBytes(n) {
+  if (!n) return '0 B'
+  if (n < 1024) return n + ' B'
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
+  return (n / 1024 / 1024).toFixed(2) + ' MB'
+}

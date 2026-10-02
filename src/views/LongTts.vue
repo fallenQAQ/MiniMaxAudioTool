@@ -149,9 +149,9 @@
             <el-select v-model="form.voice_setting.emotion" class="full-width">
               <el-option
                 v-for="e in emotionOptions"
-                :key="e"
-                :label="e"
-                :value="e"
+                :key="e.value"
+                :label="e.label"
+                :value="e.value"
               />
             </el-select>
           </el-form-item>
@@ -354,7 +354,8 @@
 
 <script setup>
 import { reactive, ref, computed, onBeforeUnmount } from 'vue'
-import { ElMessage, ElLoading } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index'
+import { ElLoading } from 'element-plus/es/components/loading/index'
 import {
   Document, EditPen, UploadFilled, Delete, Promotion, RefreshLeft,
   DataLine, Loading, Files, VideoPause, VideoPlay, Close, Download
@@ -363,55 +364,22 @@ import { useApiKey } from '@/composables/useApiKey'
 import { createTask, queryTask } from '@/api/modules/longTts'
 import { upload, retrieve } from '@/api/modules/file'
 import AudioPlayer from '@/components/AudioPlayer.vue'
+import { formatDuration } from '@/utils/audio'
+import {
+  SPEECH_MODELS, EMOTIONS, AUDIO_FORMATS, SAMPLE_RATES, BITRATES, LANGUAGES
+} from '@/constants'
 
 // API Key 校验
 const { hasKey, goSettings } = useApiKey()
 
 // ====== 选项常量 ======
-
-// 语音模型
-const modelOptions = [
-  { label: 'speech-2.8-hd', value: 'speech-2.8-hd' },
-  { label: 'speech-2.8-turbo', value: 'speech-2.8-turbo' },
-  { label: 'speech-2.6-hd', value: 'speech-2.6-hd' },
-  { label: 'speech-2.6-turbo', value: 'speech-2.6-turbo' },
-  { label: 'speech-02-hd', value: 'speech-02-hd' },
-  { label: 'speech-02-turbo', value: 'speech-02-turbo' }
-]
-
-// 情绪
-const emotionOptions = [
-  'auto', 'happy', 'sad', 'angry', 'fearful',
-  'disgusted', 'surprised', 'calm', 'fluent', 'whisper'
-]
-
-// 采样率
-const sampleRateOptions = [8000, 16000, 22050, 24000, 32000, 44100]
-// 比特率
-const bitrateOptions = [32000, 64000, 128000, 256000]
-// 音频格式
-const formatOptions = ['mp3', 'pcm', 'flac', 'wav']
-
-// 语种增强（空字符串表示不传递）
-const languageBoostOptions = [
-  { label: '不设置', value: '' },
-  { label: 'auto', value: 'auto' },
-  { label: 'Chinese 中文', value: 'Chinese' },
-  { label: 'English 英语', value: 'English' },
-  { label: 'Japanese 日语', value: 'Japanese' },
-  { label: 'Korean 韩语', value: 'Korean' },
-  { label: 'French 法语', value: 'French' },
-  { label: 'Spanish 西班牙语', value: 'Spanish' },
-  { label: 'German 德语', value: 'German' },
-  { label: 'Portuguese 葡萄牙语', value: 'Portuguese' },
-  { label: 'Russian 俄语', value: 'Russian' },
-  { label: 'Arabic 阿拉伯语', value: 'Arabic' },
-  { label: 'Hindi 印地语', value: 'Hindi' },
-  { label: 'Vietnamese 越南语', value: 'Vietnamese' },
-  { label: 'Indonesian 印尼语', value: 'Indonesian' },
-  { label: 'Thai 泰语', value: 'Thai' },
-  { label: 'Malay 马来语', value: 'Malay' }
-]
+const modelOptions = SPEECH_MODELS
+const emotionOptions = EMOTIONS
+const formatOptions = AUDIO_FORMATS
+const sampleRateOptions = SAMPLE_RATES
+const bitrateOptions = BITRATES
+// 语种增强（首项"不设置"表示不传递该字段）
+const languageBoostOptions = [{ label: '不设置', value: '' }, ...LANGUAGES]
 
 // ====== 表单状态 ======
 const form = reactive({
@@ -462,13 +430,8 @@ const resultFilename = ref('long-tts-audio.mp3')
 
 // ====== 计算属性 ======
 
-// 已等待时间格式化为 mm:ss
-const elapsedText = computed(() => {
-  const total = Math.floor(elapsedMs.value / 1000)
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-})
+// 已等待时间格式化为 mm:ss（复用 utils 中的 formatDuration）
+const elapsedText = computed(() => formatDuration(elapsedMs.value))
 
 // 步骤条当前激活项
 const stepActive = computed(() => {

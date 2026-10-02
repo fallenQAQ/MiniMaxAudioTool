@@ -291,8 +291,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { ElMessage } from 'element-plus'
+import { reactive, ref, computed, onBeforeUnmount } from 'vue'
+import { ElMessage } from 'element-plus/es/components/message/index'
 import {
   Microphone,
   EditPen,
@@ -305,57 +305,24 @@ import {
 } from '@element-plus/icons-vue'
 import { synthesize, synthesizeStream } from '@/api/modules/tts'
 import { useApiKey } from '@/composables/useApiKey'
+import { useViewport } from '@/composables/useViewport'
 import AudioPlayer from '@/components/AudioPlayer.vue'
-import { hexToBlob, downloadBlob, formatDuration, mimeFromFormat } from '@/utils/audio'
+import { hexToBlob, downloadBlob, formatDuration, formatBytes, mimeFromFormat } from '@/utils/audio'
+import {
+  SPEECH_MODELS, QUICK_VOICES, EMOTIONS,
+  AUDIO_FORMATS, SAMPLE_RATES, BITRATES
+} from '@/constants'
 
 // API Key 校验：未配置时显示引导
 const { hasKey, goSettings } = useApiKey()
 
-// 模型选项
-const modelOptions = [
-  { value: 'speech-2.8-hd', label: 'speech-2.8-hd（最新 HD）' },
-  { value: 'speech-2.8-turbo', label: 'speech-2.8-turbo（最新 Turbo）' },
-  { value: 'speech-2.6-hd', label: 'speech-2.6-hd' },
-  { value: 'speech-2.6-turbo', label: 'speech-2.6-turbo' },
-  { value: 'speech-02-hd', label: 'speech-02-hd' },
-  { value: 'speech-02-turbo', label: 'speech-02-turbo' }
-]
-
-// 常用系统音色（选中后自动填入 voice_id 输入框）
-const voiceOptions = [
-  { value: 'male-qn-qingse', label: 'male-qn-qingse 青涩男声' },
-  { value: 'male-qn-jingying', label: 'male-qn-jingying 精英男声' },
-  { value: 'male-qn-badao', label: 'male-qn-badao 霸道男声' },
-  { value: 'male-qn-daxuesheng', label: 'male-qn-daxuesheng 大学生男声' },
-  { value: 'female-shaonv', label: 'female-shaonv 少女女声' },
-  { value: 'female-yujie', label: 'female-yujie 御姐女声' },
-  { value: 'female-chengshu', label: 'female-chengshu 成熟女声' },
-  { value: 'female-tianmei', label: 'female-tianmei 甜美女声' },
-  { value: 'female-wenrou', label: 'female-wenrou 温柔女声' },
-  { value: 'audiobook_male_1', label: 'audiobook_male_1 有声书男声1' },
-  { value: 'audiobook_female_1', label: 'audiobook_female_1 有声书女声1' },
-  { value: 'English_Graceful_Lady', label: 'English_Graceful_Lady 优雅英文女声' },
-  { value: 'English_Gentle_Seminar', label: 'English_Gentle_Seminar 温文英文男声' }
-]
-
-// 情绪选项（auto 时不传 emotion 字段）
-const emotionOptions = [
-  { value: 'auto', label: 'auto 不指定' },
-  { value: 'happy', label: 'happy 开心' },
-  { value: 'sad', label: 'sad 悲伤' },
-  { value: 'angry', label: 'angry 愤怒' },
-  { value: 'fearful', label: 'fearful 恐惧' },
-  { value: 'disgusted', label: 'disgusted 厌恶' },
-  { value: 'surprised', label: 'surprised 惊讶' },
-  { value: 'calm', label: 'calm 平静' },
-  { value: 'fluent', label: 'fluent 流畅' },
-  { value: 'whisper', label: 'whisper 轻声' }
-]
-
-// 音频格式 / 采样率 / 比特率选项
-const formatOptions = ['mp3', 'pcm', 'flac', 'wav']
-const sampleRateOptions = [8000, 16000, 22050, 24000, 32000, 44100]
-const bitrateOptions = [32000, 64000, 128000, 256000]
+// 模型 / 音色 / 情绪 / 音频参数选项（共享常量）
+const modelOptions = SPEECH_MODELS
+const voiceOptions = QUICK_VOICES
+const emotionOptions = EMOTIONS
+const formatOptions = AUDIO_FORMATS
+const sampleRateOptions = SAMPLE_RATES
+const bitrateOptions = BITRATES
 
 // 表单默认值
 const defaultForm = () => ({
@@ -387,12 +354,9 @@ const result = reactive({
 const streamProgress = reactive({ chunkCount: 0, byteCount: 0 })
 let abortController = null
 
-// extra_info 描述列表列数：桌面 2 列，移动 1 列（监听 resize 响应式更新）
-const winWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1280)
+// extra_info 描述列表列数：桌面 2 列，移动 1 列（useViewport 内部监听 resize）
+const { width: winWidth } = useViewport()
 const extraInfoColumn = computed(() => (winWidth.value < 768 ? 1 : 2))
-function onResize() {
-  winWidth.value = window.innerWidth
-}
 
 // 常用音色选中 → 填入 voice_id
 function onQuickVoiceChange(val) {
@@ -516,21 +480,9 @@ function handleDownload() {
   downloadBlob(blob, result.filename)
 }
 
-// 字节格式化
-function formatBytes(n) {
-  if (!n) return '0 B'
-  if (n < 1024) return n + ' B'
-  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
-  return (n / 1024 / 1024).toFixed(2) + ' MB'
-}
-
-// 挂载时监听窗口尺寸，卸载时中断未完成的流式请求并移除监听
-onMounted(() => {
-  window.addEventListener('resize', onResize)
-})
+// 卸载时中断未完成的流式请求（resize 监听由 useViewport 自行清理）
 onBeforeUnmount(() => {
   if (abortController) abortController.abort()
-  window.removeEventListener('resize', onResize)
 })
 </script>
 
